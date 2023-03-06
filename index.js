@@ -20,40 +20,28 @@ server.listen(5000, function () {
     console.log('Запускаю сервер на порте 5000');
 });
 
-// Обработчик веб-сокетов
-var players = {};
+var player = [];
 
-io.on('connection', function (socket) {
+io.on('connection', (socket) => {
+    console.log('Client connected');
 
     socket.on('new player', function () {
-        players[socket.id] = {
-            x: 300,
-            y: 300
-        };
+        player.push(socket.id);
+        if (player.length % 2 != 0) {
+            socket.emit('waiting');
+        } else {
+            io.emit('startGame');
+        }
+
+        console.log(player);
+    });
+    
+    socket.on('mousemove', function(data) {
+        console.log("data.user1");
+        socket.broadcast.emit('mousemove', data);
     });
 
-    socket.on('movement', function (data) {
-        var player = players[socket.id] || {};
-        if (data.left) {
-            player.x -= 5;
-        }
-        if (data.up) {
-            player.y -= 5;
-        }
-        if (data.right) {
-            player.x += 5;
-        }
-        if (data.down) {
-            player.y += 5;
-        }
-    });
-
-    socket.on('disconnect', function() {
-        delete players[socket.id]
+    socket.on('disconnect', function () {
+        delete player[socket.id]
     });
 });
-
-setInterval(function () {
-    io.sockets.emit('state', players);
-}, 1000 / 60);
-
