@@ -12,7 +12,7 @@ app.use('/static', express.static(__dirname + '/static'));
 
 // Маршруты
 app.get('/', function (request, response) {
-    response.sendFile(path.join(__dirname, 'index.html'));
+    //response.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Запуск сервера
@@ -20,28 +20,40 @@ server.listen(5000, function () {
     console.log('Запускаю сервер на порте 5000');
 });
 
-var player = [];
+// Обработчик веб-сокетов
+var players = {};
 
-io.on('connection', (socket) => {
-    console.log('Client connected');
+io.on('connection', function (socket) {
 
     socket.on('new player', function () {
-        player.push(socket.id);
-        if (player.length % 2 != 0) {
-            socket.emit('waiting');
-        } else {
-            io.emit('startGame');
+        players[socket.id] = {
+            x: 300,
+            y: 300
+        };
+    });
+
+    socket.on('movement', function (data) {
+        var player = players[socket.id] || {};
+        if (data.left) {
+            player.x -= 5;
         }
-
-        console.log(player);
+        if (data.up) {
+            player.y -= 5;
+        }
+        if (data.right) {
+            player.x += 5;
+        }
+        if (data.down) {
+            player.y += 5;
+        }
     });
-    
-    socket.on('mousemove', function(data) {
-        console.log("data.user1");
-        socket.broadcast.emit('mousemove', data);
-    });
 
-    socket.on('disconnect', function () {
-        delete player[socket.id]
+    socket.on('disconnect', function() {
+        delete players[socket.id]
     });
 });
+
+setInterval(function () {
+    io.sockets.emit('state', players);
+}, 1000 / 60);
+
